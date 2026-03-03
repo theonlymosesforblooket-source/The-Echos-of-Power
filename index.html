@@ -34,3 +34,89 @@
             <div class="bar-fill stress-bar" id="stressBar"><span id="stressText">0</span>%</div>
             <div id="stressStatus" class="status-text">MANAGEABLE</div>
         </div>
+        <!-- ADVISOR & EVENTS -->
+        <div class="advisor-section">
+            <div class="section-header">🎭 Royal Advisor</div>
+            <div id="advisorBox" class="advisor-box">
+                General Valeria: "My liege, the realm awaits your wisdom..."
+            </div>
+        </div>
+
+        <div class="event-section">
+            <div class="section-header">📜 Events & Chronicles</div>
+            <div id="eventLog" class="event-log">
+                👑 Reign begins. The world watches your every move...<br>
+                Consent is fragile. Stress is real. Perception is everything.
+            </div>
+        </div>
+
+        <!-- CHOICE PANEL -->
+        <div class="choice-section">
+            <h3 class="section-header">Your Command</h3>
+            <div id="mainChoices" class="choice-grid"></div>
+        </div>
+
+        <!-- ECONOMY DASHBOARD -->
+        <div class="economy-section">
+            <h3 class="section-header">💰 Economy & Resources</h3>
+            <div class="econ-grid">
+                <div>Agriculture: $<span id="agriculture">50</span></div>
+                <div>Mining: $<span id="mining">40</span></div>
+                <div>Trade: $<span id="trade">30</span></div>
+                <div>Treasury: $<span id="treasury">100</span></div>
+            </div>
+            <div id="infraStatus" class="status-text">No infrastructure built</div>
+        </div>
+
+        <!-- CONTROL PANEL -->
+        <div class="control-panel">
+            <button id="saveBtn">💾 Save Reign</button>
+            <button id="loadBtn">📂 Load Reign</button>
+            <button id="newReignBtn">👑 New Reign</button>
+        </div>
+
+        <!-- STATUS DASHBOARD -->
+        <div class="status-dashboard">
+            <div>Path: <span id="pathDisplay">Uncertain</span></div>
+            <div>Territory: <span id="territoryControl">75%</span></div>
+            <div>Turn: <span id="turnSummary">1</span></div>
+        </div>
+        <!-- GEOGRAPHY & TECH -->
+        <div class="geo-tech-section">
+            <div class="geo-panel">
+                <h3 class="section-header">🌍 Geography</h3>
+                <div class="geo-grid">
+                    <div>Plains: <span id="plainsControl">100%</span></div>
+                    <div>Mountains: <span id="mountainsControl">60%</span></div>
+                    <div>Rivers: <span id="riversControl">80%</span></div>
+                    <div>Coastal: <span id="coastalControl">40%</span></div>
+                </div>
+            </div>
+            <div class="tech-panel">
+                <h3 class="section-header">⚙️ Technology</h3>
+                <div id="techGrid" class="tech-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- CIVILIZATION SELECTOR -->
+        <div class="civ-selector">
+            <h3 class="section-header">🏛️ Civilization</h3>
+            <div class="civ-buttons">
+                <button id="civRome" class="civ-btn">Roman Empire</button>
+                <button id="civMedieval" class="civ-btn">Medieval Kingdom</button>
+            </div>
+        </div>
+
+        <!-- TECH & ECONOMY CHOICES -->
+        <div class="secondary-choices">
+            <h4>Economy & Tech Commands</h4>
+            <div id="econTechChoices" class="choice-grid"></div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="game.js"></script>
+</body>
+</html>
