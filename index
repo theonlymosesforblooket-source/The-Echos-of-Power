@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Echos of Power - Leadership Sim</title>
+    <style>
+        body { 
+            font-family: 'Georgia', serif; 
+            background: linear-gradient(135deg, #1a1a2e, #16213e); 
+            color: #e0e0e0; 
+            margin: 0; 
+            padding: 20px; 
+            min-height: 100vh;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { text-align: center; color: #ffd700; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
+        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .bar-container { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; }
+        .bar { height: 25px; background: linear-gradient(90deg, #ff4444, #ffaa00, #44ff44); 
+                border-radius: 12px; margin: 5px 0; transition: width 0.5s ease; 
+                position: relative; overflow: hidden; }
+        .bar-label { font-weight: bold; margin-bottom: 5px; }
+        .stress-critical { border: 3px solid #ff4444; box-shadow: 0 0 15px rgba(255,68,68,0.5); }
+        .event-log { background: rgba(0,0,0,0.4); padding: 15px; border-radius: 10px; 
+                      height: 200px; overflow-y: auto; font-style: italic; }
+        .choices { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }
+        button { background: linear-gradient(145deg, #667eea, #764ba2); color: white; 
+                 border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; 
+                 font-size: 16px; transition: all 0.3s; font-family: inherit; }
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .turn-counter { text-align: center; font-size: 24px; color: #ffd700; margin: 10px 0; }
+        .advisor-speech { background: rgba(255,215,0,0.1); border-left: 4px solid #ffd700; 
+                          padding: 15px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👑 The Echos of Power</h1>
+        <div class="turn-counter" id="turnCounter">Turn 1</div>
+        
+        <div class="status-grid">
+            <!-- Favor Bars -->
+            <div class="bar-container">
+                <h3>🗳️ Consent to Rule</h3>
+                <div class="bar-label">Elites: <span id="elites">50</span>%</div>
+                <div class="bar" id="elitesBar" style="width: 50%"></div>
+                <div class="bar-label">Common: <span id="common">50</span>%</div>
+                <div class="bar" id="commonBar" style="width: 50%"></div>
+                <div class="bar-label">Pillars: <span id="pillars">50</span>%</div>
+                <div class="bar" id="pillarsBar" style="width: 50%"></div>
+                <div id="legitimacyStatus">STABLE: Power secure</div>
+            </div>
+
+            <!-- Stress Bar -->
+            <div class="bar-container">
+                <h3>🧠 Leadership Stress</h3>
+                <div class="bar-label">Stress: <span id="stress">0</span>%</div>
+                <div class="bar" id="stressBar"></div>
+                <div id="stressStatus">MANAGEABLE</div>
+            </div>
+        </div>
+
+        <div class="advisor-speech" id="advisorSpeech">
+            General Valeria: "My liege, the people murmur. What is your will?"
+        </div>
+
+        <div class="event-log" id="eventLog">
+            Reign begins. The world watches...
+        </div>
+
+        <div class="choices" id="choiceContainer">
+            <!-- Choices populated by JS -->
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let gameState = {
+            turn: 1,
+            favor: { elites: 50, common: 50, pillars: 50 },
+            stress: 0,
+            legitimacy: 'STABLE: Power secure',
+            gameOver: false,
+            advisor: {
+                name: 'General Valeria',
+                loyalty: 60,
+                agenda: 'military',
+                lastAdvice: ''
+            }
+        };
+
+        // DOM Elements
+        const turnCounter = document.getElementById('turnCounter');
+        const elitesBar = document.getElementById('elitesBar');
+        const elitesText = document.getElementById('elites');
+        const commonBar = document.getElementById('commonBar');
+        const commonText = document.getElementById('common');
+        const pillarsBar = document.getElementById('pillarsBar');
+        const pillarsText = document.getElementById('pillars');
+        const stressBar = document.getElementById('stressBar');
+        const stressText = document.getElementById('stress');
+        const stressStatus = document.getElementById('stressStatus');
+        const legitimacyStatus = document.getElementById('legitimacyStatus');
+        const advisorSpeech = document.getElementById('advisorSpeech');
+        const eventLog = document.getElementById('eventLog');
+        const choiceContainer = document.getElementById('choiceContainer');
+
+        // Update UI Function
+        function updateUI() {
+            elitesText.textContent = gameState.favor.elites;
+            commonText.textContent = gameState.favor.common;
+            pillarsText.textContent = gameState.pillars;
+            stressText.textContent = gameState.stress;
+            
+            elitesBar.style.width = gameState.favor.elites + '%';
+            commonBar.style.width = gameState.favor.common + '%';
+            pillarsBar.style.width = gameState.favor.pillars + '%';
+            stressBar.style.width = gameState.stress + '%';
+            
+            turnCounter.textContent = `Turn ${gameState.turn}`;
+            
+            stressStatus.textContent = getStressStatus();
+            legitimacyStatus.textContent = gameState.legitimacy;
+            
+            if (gameState.stress > 70) {
+                stressBar.parentElement.classList.add('stress-critical');
+            } else {
+                stressBar.parentElement.classList.remove('stress-critical');
+            }
+        }
+
+        function getStressStatus() {
+            if (gameState.stress > 70) return 'CRITICAL';
+            if (gameState.stress > 40) return 'HIGH';
+            return 'MANAGEABLE';
+        }
+
+        // Favor System
+        function adjustFavor(group, delta) {
+            gameState.favor[group] = Math.max(0, Math.min(100, gameState.favor[group] + delta));
+            updateLegitimacyStatus();
+        }
+
+        function updateLegitimacyStatus() {
+            const avg = (gameState.favor.elites + gameState.favor.common + gameState.favor.pillars) / 3;
+            if (avg < 30) gameState.legitimacy = 'CRISIS: Legitimacy crumbling';
+            else if (avg < 70) gameState.legitimacy = 'UNSTABLE: Consent fragile';
+            else gameState.legitimacy = 'STABLE: Power secure';
+        }
+
+        // Stress System
+        function addStress(amount) {
+            gameState.stress = Math.min(100, gameState.stress + amount);
+            if (gameState.stress > 80) {
+                eventLog.innerHTML += `<div style="color: #ff4444;">STRESS OVERLOAD: Random event triggered! Favor -10 across board.</div>`;
+                adjustFavor('elites', -10);
+                adjustFavor('common', -10);
+                adjustFavor('pillars', -10);
+            }
+            updateUI();
+        }
+
+        function reduceStress(amount) {
+            gameState.stress = Math.max(0, gameState.stress - amount);
+            updateUI();
+        }
+
+        // Initialize UI
+        updateUI();
+        // Events System
+        const events = [
+            { text: "🌾 Crisis: Famine hits farms.", favor: { common: -15 }, stress: 20 },
+            { text: "🏛️ Elites demand tax cut.", favor: { elites: 10, common: -10 }, stress: 10 },
+            { text: "⚔️ Pillars request military funding.", favor: { pillars: 15 }, stress: 15 },
+            { text: "📜 Commoners protest corruption.", favor: { common: 20, elites: -15 }, stress: 25 },
+            { text: "💰 Merchants offer trade deal.", favor: { pillars: 10, elites: 5 }, stress: 5 }
+        ];
+
+        function triggerEvent() {
+            const evt = events[Math.floor(Math.random() * events.length)];
+            eventLog.innerHTML += `<div>📜 <strong>EVENT:</strong> ${evt.text}</div>`;
+            
+            for (let group in evt.favor) {
+                adjustFavor(group, evt.favor[group]);
+            }
+            addStress(evt.stress);
+            
+            eventLog.scrollTop = eventLog.scrollHeight;
+        }
+
+        // Advisor System
+        function getAdvisorAdvice(action) {
+            if (gameState.advisor.loyalty < 40) {
+                gameState.advisor.lastAdvice = `${gameState.advisor.name} betrays you! "${action}" fails spectacularly.`;
+                addStress(20);
+                adjustFavor('elites', -15);
+                gameState.advisor.loyalty -= 10;
+            } else {
+                gameState.advisor.lastAdvice = `${gameState.advisor.name}: "${action}" will work... partially.`;
+                gameState.advisor.loyalty += 2;
+            }
+        }
+
+        // Choice System
+        const choices = [
+            { 
+                text: "👥 Delegate (reduce stress, risk betrayal)", 
+                action: () => {
+                    getAdvisorAdvice("Delegate authority");
+                    reduceStress(15);
+                    adjustFavor('elites', -5);
+                    triggerEvent();
+                }
+            },
+            { 
+                text: "⚔️ Military Push (+Pillars/-Common)", 
+                action: () => {
+                    getAdvisorAdvice("Military campaign");
+                    adjustFavor('pillars', 20);
+                    adjustFavor('common', -5);
+                    addStress(10);
+                    triggerEvent();
+                }
+            },
+            { 
+                text: "📜 Reforms (+Common/-Elites)", 
+                action: () => {
+                    getAdvisorAdvice("Social reforms");
+                    adjustFavor('common', 15);
+                    adjustFavor('elites', -10);
+                    addStress(5);
+                    triggerEvent();
+                }
+            },
+            { 
+                text: "😴 Ignore crisis (stress explodes)", 
+                action: () => {
+                    getAdvisorAdvice("Do nothing");
+                    addStress(25);
+                    triggerEvent();
+                }
+            }
+        ];
+
+        function populateChoices() {
+            choiceContainer.innerHTML = '';
+            choices.forEach((choice, index) => {
+                const btn = document.createElement('button');
+                btn.textContent = choice.text;
+                btn.onclick = () => {
+                    choice.action();
+                    gameState.turn++;
+                    checkGameOver();
+                    updateUI();
+                    populateChoices(); // Refresh for new state
+                    updateAdvisorSpeech();
+                };
+                choiceContainer.appendChild(btn);
+            });
+        }
+
+        // Game Over Check
+        function checkGameOver() {
+            const totalFavor = gameState.favor.elites + gameState.favor.common + gameState.favor.pillars;
+            if (totalFavor < 30) {
+                endGame("GAME OVER: Lost all consent. Your reign collapses.");
+                return true;
+            }
+            if (gameState.turn > 15) {
+                endGame("REIGN ENDS: Your legacy is written in the chronicles.");
+                return true;
+            }
+            return false;
+        }
+        function updateAdvisorSpeech() {
+            advisorSpeech.innerHTML = `
+                <strong>${gameState.advisor.name}</strong>: "${gameState.advisor.lastAdvice || 'What is your will, my liege?'}" 
+                <br><small>Loyalty: ${gameState.advisor.loyalty}</small>
+            `;
+        }
+
+        function endGame(message) {
+            gameState.gameOver = true;
+            choiceContainer.innerHTML = `
+                <button onclick="location.reload()" style="width: 100%; font-size: 20px; padding: 20px; background: linear-gradient(145deg, #ff6b6b, #ee5a52);">
+                    🏰 New Reign
+                </button>
+            `;
+            eventLog.innerHTML += `<div style="color: #ffd700; font-size: 18px; text-align: center; padding: 20px;">
+                ${message}
+            </div>`;
+            
+            // Calculate Path & Ending
+            const militaryActions = gameState.turn * 0.3; // Track path
+            const reformActions = gameState.turn * 0.2;
+            const avgStress = gameState.stress;
+            const finalFavor = (gameState.favor.elites + gameState.favor.common + gameState.favor.pillars) / 3;
+            
+            let path = "The Enigma";
+            let ending = "";
+            
+            if (gameState.favor.pillars > 70) {
+                path = "⚔️ The Warlord";
+                ending = "Your legions carry your name into legend. Blood secures eternity.";
+            } else if (gameState.favor.common > 70) {
+                path = "📜 The Reformer";
+                ending = "The people sing your name in the fields. Your laws endure.";
+            } else if (gameState.favor.elites > 70) {
+                path = "🏛️ The Aristocrat";
+                ending = "The nobles toast your name in golden halls. Tradition preserved.";
+            } else if (avgStress > 60) {
+                path = "🕵️ The Shadow";
+                ending = "Whispers follow your name in dark alleys. Power's price was solitude.";
+            }
+            
+            eventLog.innerHTML += `<div style="color: #ffd700; font-size: 16px; text-align: center; margin: 20px 0;">
+                <strong>YOUR LEGACY:</strong> ${path}<br>
+                <em>"${ending}"</em>
+                <br><small>Final Stress: ${avgStress}% | Final Legitimacy: ${Math.round(finalFavor)}%</small>
+            </div>`;
+            
+            eventLog.scrollTop = eventLog.scrollHeight;
+        }
+
+        // Path Tracking System
+        let actionHistory = { military: 0, reform: 0, delegate: 0, ignore: 0 };
+
+        // Enhanced Choices with Path Tracking
+        const enhancedChoices = [
+            { 
+                text: "👥 Delegate", id: "delegate",
+                action: () => {
+                    actionHistory.delegate++;
+                    getAdvisorAdvice("Delegate authority");
+                    reduceStress(15);
+                    adjustFavor('elites', -5);
+                }
+            },
+            { 
+                text: "⚔️ Military Push", id: "military",
+                action: () => {
+                    actionHistory.military++;
+                    getAdvisorAdvice("Military campaign");
+                    adjustFavor('pillars', 20);
+                    adjustFavor('common', -5);
+                    addStress(10);
+                }
+            },
+            { 
+                text: "📜 Reforms", id: "reform",
+                action: () => {
+                    actionHistory.reform++;
+                    getAdvisorAdvice("Social reforms");
+                    adjustFavor('common', 15);
+                    adjustFavor('elites', -10);
+                    addStress(5);
+                }
+            },
+            { 
+                text: "😴 Ignore", id: "ignore",
+                action: () => {
+                    actionHistory.ignore++;
+                    getAdvisorAdvice("Do nothing");
+                    addStress(25);
+                }
+            }
+        ];
+
+        // Initialize Game
+        function initGame() {
+            populateChoices();
+            updateAdvisorSpeech();
+            eventLog.innerHTML = "👑 Reign begins. The world watches your every move...";
+        }
+
+        // Override choices with enhanced version
+        function populateChoices() {
+            choiceContainer.innerHTML = '';
+            enhancedChoices.forEach((choice) => {
+                const btn = document.createElement('button');
+                btn.textContent = choice.text;
+                btn.onclick = () => {
+                    if (gameState.gameOver) return;
+                    choice.action();
+                    triggerEvent();
+                    gameState.turn++;
+                    updateUI();
+                    updateAdvisorSpeech();
+                    if (!checkGameOver()) {
+                        populateChoices();
+                    }
+                };
+                choiceContainer.appendChild(btn);
+            });
+        }
+
+        // Auto-event every 3 turns
+        setInterval(() => {
+            if (gameState.turn % 3 === 0 && !gameState.gameOver) {
+                eventLog.innerHTML += `<div style="color: #44ff44;">⏰ Scheduled crisis approaches...</div>`;
+                setTimeout(triggerEvent, 500);
+            }
+        }, 10000);
+
+        // Start the game
+        initGame();
+    </script>
+</body>
+</html>
