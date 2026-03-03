@@ -962,63 +962,128 @@ function balanceCheck() {
         logEvent('💰 Unexpected tribute arrives');
     }
 }
+// === MOBILE + KEYBOARD CONTROLS ===
+document.addEventListener('keydown', (e) => {
+    if (gameState.gameOver) return;
+    const buttons = document.querySelectorAll('#mainChoices button');
+    if (e.key === '1' && buttons[0]) buttons[0].click();
+    if (e.key === '2' && buttons[1]) buttons[1].click();
+    if (e.key === '3' && buttons[2]) buttons[2].click();
+    if (e.key === 's') saveGame();
+    if (e.key === 'l') loadGame();
+});
 
-// === MASTER UPDATE LOOP ===
+// === ACHIEVEMENT SYSTEM ===
+const achievements = {
+    ironFist: { unlocked: false, condition: () => gameState.path.military >= 6, text: 'Iron Fist' },
+    peoplesChamp: { unlocked: false, condition: () => gameState.path.political >= 5, text: 'People\'s Champion' }
+};
+
+function checkAchievements() {
+    Object.values(achievements).forEach(ach => {
+        if (!ach.unlocked && ach.condition()) {
+            ach.unlocked = true;
+            logEvent(`🏆 ACHIEVEMENT: ${ach.text}`);
+        }
+    });
+}
+
+// === CRITICAL BUTTON FIX: SAFE DOM CHECKS ===
+function safeQuery(id) {
+    const el = document.getElementById(id);
+    if (!el) console.error(`DOM ERROR: #${id} not found`);
+    return el;
+}
+
+// === FIXED CONTROL SETUP ===
+function setupControls() {
+    const saveBtn = safeQuery('saveBtn');
+    const loadBtn = safeQuery('loadBtn'); 
+    const newBtn = safeQuery('newReignBtn');
+    const romeBtn = safeQuery('civRome');
+    const medBtn = safeQuery('civMedieval');
+    
+    if (saveBtn) saveBtn.onclick = saveGame;
+    if (loadBtn) loadBtn.onclick = loadGame;
+    if (newBtn) newBtn.onclick = () => location.reload();
+    if (romeBtn) romeBtn.onclick = () => switchCivilization('rome');
+    if (medBtn) medBtn.onclick = () => switchCivilization('medieval');
+}
+
+// === FIXED POPULATE CHOICES ===
+function populateMainChoices() {
+    const container = safeQuery('mainChoices');
+    if (!container) return console.error('mainChoices container missing');
+    
+    container.innerHTML = '';
+    const choices = getDynamicChoices();
+    
+    choices.forEach((choice, i) => {
+        const btn = document.createElement('button');
+        btn.innerHTML = choice.text;
+        btn.id = `choice${i}`;
+        btn.onclick = () => {
+            if (gameState.gameOver) return;
+            choice.effect();
+            updateAdvisorSpeech(choice.action);
+            gameState.turn++;
+            updateUI();
+            checkGameOver();
+        };
+        container.appendChild(btn);
+    });
+}
+
+// === FIXED TECH/ECON CHOICES ===
+function populateTechChoices() {
+    const container = safeQuery('econTechChoices');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    [...econChoices, ...techChoices].forEach(choice => {
+        const btn = document.createElement('button');
+        btn.innerHTML = choice.text;
+        btn.onclick = () => {
+            if (gameState.gameOver || !choice.effect()) return;
+            updateUI();
+        };
+        container.appendChild(btn);
+    });
+}
+
+// === MASTER LOOP (Safe version) ===
 function masterUpdate() {
     if (gameState.gameOver) return;
-    
     gameLoop();
     checkAchievements();
-    balanceCheck();
-    lockWorldPerception();
-    applyEconomyPressure();
-    
-    // Auto-save every 10 turns
-    if (gameState.turn % 10 === 0) {
-        saveGame();
-        logEvent('💾 Auto-save (Turn ' + gameState.turn + ')');
-    }
-}
-
-// === PERFECT INITIALIZATION ===
-function initGame() {
-    // Full DOM setup
-    Object.assign(dom, {
-        stressStatus: document.getElementById('stressStatus'),
-        eventLog: document.getElementById('eventLog'),
-        mainChoices: document.getElementById('mainChoices'),
-        econTechChoices: document.getElementById('econTechChoices'),
-        saveBtn: document.getElementById('saveBtn'),
-        loadBtn: document.getElementById('loadBtn'),
-        newReignBtn: document.getElementById('newReignBtn'),
-        civRome: document.getElementById('civRome'),
-        civMedieval: document.getElementById('civMedieval'),
-        pathDisplay: document.getElementById('pathDisplay'),
-        territoryControl: document.getElementById('territoryControl'),
-        turnSummary: document.getElementById('turnSummary')
-    });
-    
     updateUI();
-    updateTechUI();
-    populateMainChoices();
-    populateTechChoices();
-    setupControls();
-    
-    // Launch sequence
-    logEvent('👑 THE ECHOS OF POWER');
-    logEvent('Power tests the soul. Consent is fragile. History watches.');
-    
-    setInterval(masterUpdate, 4000);
-    logEvent('⚔️ Rule begins. What will you become?');
 }
 
-// === LAUNCH ===
+// === BULLETPROOF INIT ===
+function initGame() {
+    // Wait for FULL DOM load
+    setTimeout(() => {
+        // Verify all critical elements exist
+        const critical = ['mainChoices', 'eventLog', 'advisorBox', 'saveBtn'];
+        const missing = critical.filter(id => !document.getElementById(id));
+        
+        if (missing.length > 0) {
+            console.error('CRITICAL DOM MISSING:', missing);
+            logEvent('❌ UI Error - reload page');
+            return;
+        }
+        
+        // Safe init
+        updateUI();
+        updateTechUI();
+        populateMainChoices();
+        populateTechChoices();
+        setupControls();
+        
+        logEvent('👑 EMPIRE READY - Rule begins');
+        setInterval(masterUpdate, 5000);
+    }, 100);
+}
+
 document.addEventListener('DOMContentLoaded', initGame);
 
-// === PUBLIC DEBUG API ===
-window.echos = {
-    save: saveGame,
-    load: loadGame,
-    debug: window.gameDebug,
-    state: () => ({ gameState, economy, geography })
-};
